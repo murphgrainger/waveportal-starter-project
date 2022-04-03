@@ -9,8 +9,9 @@ export default function App() {
   const [isLoading, setLoader] = useState(false);
   const [allWaves, setAllWaves] = useState([]);
   const [waveMessage, setMessage] = useState("");
+  const [errorMessage, setError] = useState("");
 
-  const contractAddress = "0x6fC3F4CDC1bd27C0663c2662fdba104bE32091c2";
+  const contractAddress = "0xC15fef671dE88D38Ea0FbA5Ce496e98a0FC4a79f";
   const contractABI = abi;
 
   const checkIfWalletIsConnected = async () => {
@@ -83,7 +84,11 @@ export default function App() {
         console.log("Ethereum object doesn't exist!");
       }
     } catch (error) {
-      console.log(error);
+      console.log("error here!", error);
+      console.log(typeof error, error.message)
+      if(error.message.includes("Wait 15m")) {
+        setError("You can only wave once every 15 minutes!")
+      }
       setLoader(false);
     }
 }
@@ -140,6 +145,7 @@ const getAllWaves = async () => {
            {isLoading ? "Processing Your Wave!" : "Wave at Me!"}
           </button>
         </div>
+        {errorMessage && <span>{errorMessage}</span>}
         <div className="waveHolder">
           <div>
             <h3>Wave Count</h3>
