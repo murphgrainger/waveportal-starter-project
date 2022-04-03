@@ -56,10 +56,6 @@ export default function App() {
       console.log(error);
     }
   }
- 
-  useEffect(() => {
-    checkIfWalletIsConnected();
-  }, [])
 
   const wave = async () => {
     try {
@@ -72,7 +68,7 @@ export default function App() {
         const wavePortalContract = new ethers.Contract(contractAddress, contractABI, signer);
 
         console.log("Sending wave message:", waveMessage);
-        const waveTxn = await wavePortalContract.wave(waveMessage);
+        const waveTxn = await wavePortalContract.wave(waveMessage, { gasLimit: 300000 });
         console.log("Mining...", waveTxn.hash);
         await waveTxn.wait();
         console.log("Mined --", waveTxn.hash);
@@ -93,26 +89,59 @@ export default function App() {
     }
 }
 
+ 
+useEffect(() => {
+  checkIfWalletIsConnected();
+}, []);
+
+useEffect(() => {
+  let wavePortalContract;
+
+  const onNewWave = (from, timestamp, message) => {
+    console.log("NewWave", from, timestamp, message);
+    setAllWaves(prevState => [
+      ...prevState,
+      {
+        address: from,
+        timestamp: new Date(timestamp * 1000),
+        message: message,
+      },
+    ]);
+  };
+
+  if(window.ethereum) {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+
+    wavePortalContract = new ethers.Contract(contractAddress, contractABI, signer);
+    wavePortalContract.on("NewWave", onNewWave);
+  }
+    return () => {
+      if(wavePortalContract) {
+        wavePortalContract.off("NewWave", onNewWave);
+      }
+    };
+  }, []);
+
 const getAllWaves = async () => {
+  const { ethereum } = window;
+
   try {
-    const { ethereum } = window;
     if (ethereum) {
       const provider = new ethers.providers.Web3Provider(ethereum);
       const signer = provider.getSigner();
       const wavePortalContract = new ethers.Contract(contractAddress, contractABI, signer);
-
       const waves = await wavePortalContract.getAllWaves();
 
-      let cleanWaves = [];
-      waves.forEach(wave => {
-        cleanWaves.push({
+      const wavesCleaned = waves && waves.map(wave => {
+        return {
           address: wave.waver,
-          timestamp: new Date(wave.timestamp * 1000),
+          timestamp: new Date(wave.timestamp *1000),
           message: wave.message
-        });
-      });
+        };
+      })
 
-      setAllWaves(cleanWaves);
+      setAllWaves(wavesCleaned);
     } else {
       console.log("Ethereum object doesn't exist!")
     }
@@ -129,6 +158,9 @@ const getAllWaves = async () => {
         </div>
         <div className="bio">
         I am learning about Solidity and Ethereum and all the things. Connect your Ethereum wallet and wave at me in the new Web3 world!
+        <br></br>
+        <br></br>
+        Note: This app doesn't have much of a frontend since that is not what I want to work on in this project!
         </div>
         {!currentAccount && (
           <button className="waveButton" onClick={connectWallet}>Connect Wallet</button> 
